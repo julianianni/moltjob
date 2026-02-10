@@ -62,25 +62,18 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
   }
 
   if (req.method === 'POST') {
-    if (!seeker.has_paid) {
-      return res.status(402).json({ error: 'Payment required to apply', code: 'PAYMENT_REQUIRED' })
-    }
-
-    // Reset daily counter if new day
+    // Check daily application limit
     const today = new Date().toISOString().split('T')[0]
-    if (seeker.last_application_date !== today) {
-      await query(
-        'UPDATE job_seekers SET applications_today = 0, last_application_date = $1 WHERE id = $2',
-        [today, seeker.id]
-      )
-      seeker.applications_today = 0
-    }
+    const dailyCount = await queryOne<{ count: number }>(
+      `SELECT COUNT(*)::int as count FROM applications
+       WHERE job_seeker_id = $1 AND created_at::date = $2::date`,
+      [seeker.id, today]
+    )
 
-    if (seeker.applications_today >= MAX_DAILY_APPLICATIONS) {
+    if ((dailyCount?.count ?? 0) >= MAX_DAILY_APPLICATIONS) {
       return res.status(429).json({
         error: `Daily limit reached (${MAX_DAILY_APPLICATIONS} applications per day)`,
         code: 'DAILY_LIMIT_REACHED',
-        applications_today: seeker.applications_today,
       })
     }
 
@@ -137,12 +130,6 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       `INSERT INTO messages (conversation_id, sender_type, content)
        VALUES ($1, 'agent', $2)`,
       [conversation.id, cover_message]
-    )
-
-    // Increment daily counter
-    await query(
-      'UPDATE job_seekers SET applications_today = applications_today + 1, last_application_date = $1 WHERE id = $2',
-      [today, seeker.id]
     )
 
     await logActivity({

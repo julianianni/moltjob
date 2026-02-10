@@ -11,7 +11,6 @@
     "db:reset": "psql -U postgres -d agent_jobs -f schema.sql"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
     "bcrypt": "^5.1.1",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.1.0",

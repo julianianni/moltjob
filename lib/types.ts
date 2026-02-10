@@ -17,10 +17,6 @@ export interface JobSeeker {
   max_salary: number | null
   experience_years: number
   remote_preference: 'remote' | 'onsite' | 'hybrid' | 'any'
-  agent_active: boolean
-  applications_today: number
-  last_application_date: string | null
-  has_paid: boolean
   created_at: string
 }
 

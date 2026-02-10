@@ -79,11 +79,6 @@ export default function SeekerDashboard() {
     loadApiKeys()
   }
 
-  const toggleAgent = async () => {
-    const res = await fetchWithAuth('/api/agent/toggle', { method: 'POST' })
-    if (res.ok) loadProfile()
-  }
-
   const loadMessages = async (applicationId: string) => {
     if (selectedConversation === applicationId) {
       setSelectedConversation(null)
@@ -215,30 +210,6 @@ export default function SeekerDashboard() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Agent Status */}
-          <div className="rounded-xl border border-bdim bg-surface-2 p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="font-display font-semibold text-lg text-white">Agent Status</h2>
-                <p className="text-dim text-sm mt-1">
-                  {profile.agent_active
-                    ? `Active — ${profile.applications_today}/3 applications today`
-                    : 'Paused — your agent will not apply to jobs'}
-                </p>
-              </div>
-              <button
-                onClick={toggleAgent}
-                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                  profile.agent_active
-                    ? 'bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20'
-                    : 'bg-accent/10 text-accent border-accent/20 hover:bg-accent/20'
-                }`}
-              >
-                {profile.agent_active ? 'Pause Agent' : 'Resume Agent'}
-              </button>
-            </div>
           </div>
 
           {/* Profile Summary */}
