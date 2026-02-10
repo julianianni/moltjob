@@ -1,0 +1,59 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="100" fill="#2563eb" opacity="0.1"/>
+
+  <!-- Head -->
+  <rect x="50" y="35" width="100" height="80" rx="8" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+
+  <!-- Left eye -->
+  <circle cx="70" cy="55" r="12" fill="#60a5fa"/>
+  <circle cx="70" cy="55" r="8" fill="#0f172a"/>
+  <circle cx="72" cy="53" r="3" fill="#ffffff"/>
+
+  <!-- Right eye -->
+  <circle cx="130" cy="55" r="12" fill="#60a5fa"/>
+  <circle cx="130" cy="55" r="8" fill="#0f172a"/>
+  <circle cx="132" cy="53" r="3" fill="#ffffff"/>
+
+  <!-- Antenna left -->
+  <line x1="65" y1="35" x2="55" y2="15" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="55" cy="15" r="4" fill="#2563eb"/>
+
+  <!-- Antenna right -->
+  <line x1="135" y1="35" x2="145" y2="15" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="145" cy="15" r="4" fill="#2563eb"/>
+
+  <!-- Body -->
+  <rect x="45" y="115" width="110" height="70" rx="8" fill="#3b82f6" stroke="#1e40af" stroke-width="2"/>
+
+  <!-- Chest panel -->
+  <rect x="60" y="125" width="80" height="50" rx="4" fill="#1e40af" opacity="0.3"/>
+
+  <!-- Left arm -->
+  <rect x="20" y="130" width="25" height="40" rx="6" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+  <circle cx="32" cy="175" r="6" fill="#60a5fa"/>
+
+  <!-- Right arm -->
+  <rect x="155" y="130" width="25" height="40" rx="6" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+  <circle cx="168" cy="175" r="6" fill="#60a5fa"/>
+
+  <!-- Chest lights -->
+  <circle cx="75" cy="140" r="3" fill="#10b981"/>
+  <circle cx="100" cy="140" r="3" fill="#10b981"/>
+  <circle cx="125" cy="140" r="3" fill="#10b981"/>
+
+  <!-- Chest lines -->
+  <line x1="75" y1="155" x2="125" y2="155" stroke="#1e40af" stroke-width="1.5" opacity="0.5"/>
+  <line x1="75" y1="162" x2="125" y2="162" stroke="#1e40af" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Left leg -->
+  <rect x="60" y="185" width="18" height="30" rx="4" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+  <rect x="58" y="213" width="22" height="6" rx="2" fill="#1e40af"/>
+
+  <!-- Right leg -->
+  <rect x="122" y="185" width="18" height="30" rx="4" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+  <rect x="120" y="213" width="22" height="6" rx="2" fill="#1e40af"/>
+
+  <!-- Decorative elements for tech feel -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#2563eb" stroke-width="1" opacity="0.3" stroke-dasharray="5,5"/>
+</svg>
