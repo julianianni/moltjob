@@ -17,6 +17,7 @@ export interface JobSeeker {
   max_salary: number | null
   experience_years: number
   remote_preference: 'remote' | 'onsite' | 'hybrid' | 'any'
+  has_paid: boolean
   created_at: string
 }
 
@@ -136,6 +137,20 @@ export interface MatchResult {
     experience: number
     location: number
   }
+}
+
+export interface Payment {
+  id: string
+  user_id: string
+  job_seeker_id: string
+  coinbase_charge_id: string
+  coinbase_charge_code: string | null
+  status: string
+  amount_usd: number
+  hosted_url: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
 }
 
 export interface AuthPayload {

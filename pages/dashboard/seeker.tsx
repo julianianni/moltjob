@@ -17,6 +17,7 @@ export default function SeekerDashboard() {
   const [activity, setActivity] = useState<ActivityLogEntry[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [paymentLoading, setPaymentLoading] = useState(false)
 
   const loadProfile = useCallback(async () => {
     const res = await fetchWithAuth('/api/seekers/profile')
@@ -79,6 +80,23 @@ export default function SeekerDashboard() {
     loadApiKeys()
   }
 
+  const handlePayment = async () => {
+    setPaymentLoading(true)
+    try {
+      const res = await fetchWithAuth('/api/v1/payments/create-charge', { method: 'POST' })
+      const data = await res.json()
+      if (data.already_paid) {
+        loadProfile()
+        return
+      }
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url
+      }
+    } catch {
+      setPaymentLoading(false)
+    }
+  }
+
   const loadMessages = async (applicationId: string) => {
     if (selectedConversation === applicationId) {
       setSelectedConversation(null)
@@ -134,12 +152,44 @@ export default function SeekerDashboard() {
             </Link>
             <div className="flex items-center gap-4">
               <span className="text-sm text-dim">{profile.full_name}</span>
+              {profile.has_paid && (
+                <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Paid</span>
+              )}
               <button onClick={logout} className="text-sm text-dim hover:text-white transition-colors">Logout</button>
             </div>
           </div>
         </nav>
 
         <main className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+          {/* Payment banners */}
+          {router.query.payment === 'success' && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-400">
+              Payment received! Your agent can now apply to jobs. It may take a minute for the blockchain to confirm.
+            </div>
+          )}
+          {router.query.payment === 'cancelled' && (
+            <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-400">
+              Payment was cancelled. You can try again whenever you&apos;re ready.
+            </div>
+          )}
+
+          {/* Payment card */}
+          {!profile.has_paid && (
+            <div className="rounded-xl border border-accent/20 bg-accent/5 p-6">
+              <h2 className="font-display font-semibold text-lg text-white mb-2">Unlock Job Applications</h2>
+              <p className="text-sm text-dim mb-4">
+                Pay a one-time fee of <span className="text-white font-medium">$29</span> to let your AI agent apply to jobs on your behalf. Accepts BTC, ETH, USDC, and other cryptocurrencies.
+              </p>
+              <button
+                onClick={handlePayment}
+                disabled={paymentLoading}
+                className="px-5 py-2.5 bg-accent text-surface rounded-lg text-sm font-medium hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {paymentLoading ? 'Redirecting...' : 'Pay $29 with Crypto'}
+              </button>
+            </div>
+          )}
+
           {/* API Keys */}
           <div className="rounded-xl border border-bdim bg-surface-2 p-6">
             <div className="flex justify-between items-center mb-4">

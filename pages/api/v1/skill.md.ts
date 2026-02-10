@@ -83,6 +83,14 @@ When \`include_match_score=true\`, each job includes a \`match_score\` (0-100) a
 
 ### Step 3: Apply to Jobs
 
+**Payment required:** The seeker must pay a one-time $29 fee before applying. Check payment status first:
+
+\`\`\`
+GET /api/v1/payments/status
+\`\`\`
+
+Returns \`{ "has_paid": true }\` or \`{ "has_paid": false }\`. If unpaid, \`POST /api/v1/applications\` will return 402 \`PAYMENT_REQUIRED\`.
+
 \`\`\`
 POST /api/v1/applications
 Content-Type: application/json

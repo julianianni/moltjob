@@ -62,6 +62,14 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
   }
 
   if (req.method === 'POST') {
+    // Payment gate — seeker must pay before applying
+    if (!seeker.has_paid) {
+      return res.status(402).json({
+        error: 'Payment required. Pay $29 to unlock job applications.',
+        code: 'PAYMENT_REQUIRED',
+      })
+    }
+
     // Check daily application limit
     const today = new Date().toISOString().split('T')[0]
     const dailyCount = await queryOne<{ count: number }>(
