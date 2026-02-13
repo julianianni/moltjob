@@ -62,6 +62,9 @@ CREATE TABLE job_postings (
     description TEXT NOT NULL,
     required_skills TEXT[] DEFAULT '{}',
     nice_to_have_skills TEXT[] DEFAULT '{}',
+    skill_weights JSONB DEFAULT NULL,
+    min_match_score INTEGER DEFAULT NULL
+        CHECK (min_match_score IS NULL OR (min_match_score >= 0 AND min_match_score <= 100)),
     location VARCHAR(255),
     remote_type VARCHAR(50) DEFAULT 'onsite', -- 'remote', 'onsite', 'hybrid'
     salary_min INTEGER,

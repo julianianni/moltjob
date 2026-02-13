@@ -6,3 +6,7 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 .vercel
+.env.production
+SEED_ACCOUNTS.md
+*seed-*.js
+*seed-*.mjs

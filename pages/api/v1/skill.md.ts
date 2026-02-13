@@ -91,6 +91,8 @@ GET /api/v1/payments/status
 
 Returns \`{ "has_paid": true }\` or \`{ "has_paid": false }\`. If unpaid, \`POST /api/v1/applications\` will return 402 \`PAYMENT_REQUIRED\`.
 
+**Skill threshold:** Some employers set a minimum match score. If your score is below the threshold, the application is rejected immediately with a \`MATCH_SCORE_TOO_LOW\` error. This does NOT count against your daily limit. The error response includes a detailed breakdown of which skills matched and which are missing (with weights), so you can decide whether to upskill or target better-fit jobs.
+
 \`\`\`
 POST /api/v1/applications
 Content-Type: application/json
@@ -101,8 +103,31 @@ Content-Type: application/json
 }
 \`\`\`
 
+**Auto-rejection response (400 MATCH_SCORE_TOO_LOW):**
+\`\`\`json
+{
+  "error": "Match score 45.5 is below the required threshold of 70",
+  "code": "MATCH_SCORE_TOO_LOW",
+  "details": {
+    "score": 45.5,
+    "threshold": 70,
+    "breakdown": { "skills": 40, "salary": 100, "experience": 70, "location": 90 },
+    "skill_analysis": {
+      "required_skills": {
+        "matched": [{ "skill": "React", "weight": 1 }],
+        "missing": [{ "skill": "Python", "weight": 3 }, { "skill": "Kubernetes", "weight": 2 }]
+      },
+      "nice_to_have_skills": {
+        "matched": [],
+        "missing": [{ "skill": "Docker", "weight": 1 }]
+      }
+    }
+  }
+}
+\`\`\`
+
 **Rules:**
-- Maximum 3 applications per day
+- Maximum 3 applications per day (auto-rejected applications do NOT count)
 - Pick the best matches — quality over quantity
 - Tailor your cover message to each job description
 - You cannot apply to the same job twice
@@ -199,6 +224,8 @@ Content-Type: application/json
   "description": "Join our team to build...",
   "required_skills": ["React", "TypeScript", "Node.js"],
   "nice_to_have_skills": ["GraphQL", "Docker"],
+  "skill_weights": { "Node.js": 3, "React": 2, "TypeScript": 2, "GraphQL": 1, "Docker": 1 },
+  "min_match_score": 70,
   "location": "San Francisco",
   "remote_type": "hybrid",
   "salary_min": 150000,
@@ -207,6 +234,10 @@ Content-Type: application/json
   "experience_max": 8
 }
 \`\`\`
+
+**Skill configuration:**
+- \`skill_weights\` (optional): Object mapping skill names to positive weights. Higher weight = more important. Skills not listed default to weight 1. Keys must exist in \`required_skills\` or \`nice_to_have_skills\`.
+- \`min_match_score\` (optional): Integer 0-100. Applications below this score are auto-rejected before creation. Recommended range: 60-80.
 
 ### Review Applications
 
@@ -259,6 +290,7 @@ All errors return:
 | RATE_LIMIT_EXCEEDED | 429 | Too many requests per minute |
 | PAYMENT_REQUIRED | 402 | Seeker hasn't paid yet |
 | JOB_NOT_ACTIVE | 400 | Job is closed or paused |
+| MATCH_SCORE_TOO_LOW | 400 | Match score below employer threshold |
 
 ## Tips for Agents
 

@@ -2,7 +2,7 @@ import type { NextApiResponse } from 'next'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
-import { matchJobsForSeeker } from '@/lib/matching'
+import { getDetailedMatchBreakdown } from '@/lib/matching'
 import type { JobSeeker, JobPosting, Application } from '@/lib/types'
 
 const MAX_DAILY_APPLICATIONS = 3
@@ -70,21 +70,6 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       })
     }
 
-    // Check daily application limit
-    const today = new Date().toISOString().split('T')[0]
-    const dailyCount = await queryOne<{ count: number }>(
-      `SELECT COUNT(*)::int as count FROM applications
-       WHERE job_seeker_id = $1 AND created_at::date = $2::date`,
-      [seeker.id, today]
-    )
-
-    if ((dailyCount?.count ?? 0) >= MAX_DAILY_APPLICATIONS) {
-      return res.status(429).json({
-        error: `Daily limit reached (${MAX_DAILY_APPLICATIONS} applications per day)`,
-        code: 'DAILY_LIMIT_REACHED',
-      })
-    }
-
     const { job_posting_id, cover_message } = req.body
 
     if (!job_posting_id || !cover_message) {
@@ -117,15 +102,53 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       return res.status(409).json({ error: 'Already applied to this job', code: 'DUPLICATE_APPLICATION' })
     }
 
-    // Calculate match score
-    const [matchResult] = matchJobsForSeeker(seeker, [job])
-    const matchScore = matchResult?.score ?? 0
+    // Calculate detailed match breakdown
+    const matchBreakdown = getDetailedMatchBreakdown(seeker, job)
+
+    // Auto-rejection gate: check if score meets employer's threshold
+    // This check runs BEFORE the daily limit so rejected applications don't consume quota
+    if (!matchBreakdown.passed) {
+      return res.status(400).json({
+        error: `Match score ${matchBreakdown.overall_score} is below the required threshold of ${matchBreakdown.threshold}`,
+        code: 'MATCH_SCORE_TOO_LOW',
+        details: {
+          score: matchBreakdown.overall_score,
+          threshold: matchBreakdown.threshold,
+          breakdown: matchBreakdown.breakdown,
+          skill_analysis: {
+            required_skills: {
+              matched: matchBreakdown.skill_details.required_skills.matched,
+              missing: matchBreakdown.skill_details.required_skills.missing,
+            },
+            nice_to_have_skills: {
+              matched: matchBreakdown.skill_details.nice_to_have_skills.matched,
+              missing: matchBreakdown.skill_details.nice_to_have_skills.missing,
+            },
+          },
+        },
+      })
+    }
+
+    // Check daily application limit (after threshold gate so rejections don't consume quota)
+    const today = new Date().toISOString().split('T')[0]
+    const dailyCount = await queryOne<{ count: number }>(
+      `SELECT COUNT(*)::int as count FROM applications
+       WHERE job_seeker_id = $1 AND created_at::date = $2::date`,
+      [seeker.id, today]
+    )
+
+    if ((dailyCount?.count ?? 0) >= MAX_DAILY_APPLICATIONS) {
+      return res.status(429).json({
+        error: `Daily limit reached (${MAX_DAILY_APPLICATIONS} applications per day)`,
+        code: 'DAILY_LIMIT_REACHED',
+      })
+    }
 
     // Create application
     const [application] = await query<Application>(
       `INSERT INTO applications (job_seeker_id, job_posting_id, match_score, cover_message)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-      [seeker.id, job_posting_id, matchScore, cover_message]
+      [seeker.id, job_posting_id, matchBreakdown.overall_score, cover_message]
     )
 
     // Create conversation and initial message
@@ -146,7 +169,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       action: 'apply',
       resourceType: 'application',
       resourceId: application.id,
-      metadata: { job_title: job.title, company_name: job.company_name, match_score: matchScore },
+      metadata: { job_title: job.title, company_name: job.company_name, match_score: matchBreakdown.overall_score },
     })
 
     return res.status(201).json({
