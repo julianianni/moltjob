@@ -39,6 +39,8 @@ export interface JobPosting {
   description: string
   required_skills: string[]
   nice_to_have_skills: string[]
+  skill_weights: Record<string, number> | null
+  min_match_score: number | null
   location: string | null
   remote_type: 'remote' | 'onsite' | 'hybrid'
   salary_min: number | null
@@ -136,6 +138,33 @@ export interface MatchResult {
     salary: number
     experience: number
     location: number
+  }
+}
+
+export interface SkillMatchDetail {
+  skill: string
+  weight: number
+}
+
+export interface DetailedMatchBreakdown {
+  overall_score: number
+  threshold: number | null
+  passed: boolean
+  breakdown: {
+    skills: number
+    salary: number
+    experience: number
+    location: number
+  }
+  skill_details: {
+    required_skills: {
+      matched: SkillMatchDetail[]
+      missing: SkillMatchDetail[]
+    }
+    nice_to_have_skills: {
+      matched: SkillMatchDetail[]
+      missing: SkillMatchDetail[]
+    }
   }
 }
 
