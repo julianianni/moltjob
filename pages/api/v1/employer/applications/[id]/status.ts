@@ -2,6 +2,7 @@ import type { NextApiResponse } from 'next'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
+import { notifyAgent } from '@/lib/orchestrator'
 import type { Application, Employer } from '@/lib/types'
 
 const VALID_STATUSES = ['pending', 'reviewing', 'shortlisted', 'interview_scheduled', 'rejected', 'accepted']
@@ -55,6 +56,30 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
     resourceId: updated.id,
     metadata: { from: application.status, to: status },
   })
+
+  // Fire-and-forget webhook to the seeker
+  const seekerInfo = await queryOne<{ user_id: string; job_title: string; company_name: string }>(
+    `SELECT js.user_id, jp.title as job_title, e.company_name
+     FROM applications a
+     JOIN job_seekers js ON js.id = a.job_seeker_id
+     JOIN job_postings jp ON jp.id = a.job_posting_id
+     JOIN employers e ON e.id = jp.employer_id
+     WHERE a.id = $1`,
+    [id]
+  )
+  if (seekerInfo) {
+    void notifyAgent(seekerInfo.user_id, 'status_change', {
+      application_id: updated.id,
+      job_posting_id: updated.job_posting_id,
+      job_title: seekerInfo.job_title,
+      company_name: seekerInfo.company_name,
+      seeker_user_id: seekerInfo.user_id,
+      employer_user_id: req.user.userId,
+      old_status: application.status,
+      new_status: status,
+      changed_at: new Date().toISOString(),
+    })
+  }
 
   return res.json(updated)
 })

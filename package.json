@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
+    "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.2",
     "next": "^15.1.0",
     "pg": "^8.13.1",

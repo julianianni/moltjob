@@ -3,7 +3,8 @@ import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
 import { getDetailedMatchBreakdown } from '@/lib/matching'
-import type { JobSeeker, JobPosting, Application } from '@/lib/types'
+import { notifyAgent } from '@/lib/orchestrator'
+import type { JobSeeker, JobPosting, Application, Employer } from '@/lib/types'
 
 const MAX_DAILY_APPLICATIONS = 3
 
@@ -171,6 +172,27 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       resourceId: application.id,
       metadata: { job_title: job.title, company_name: job.company_name, match_score: matchBreakdown.overall_score },
     })
+
+    // Fire-and-forget webhook to the employer
+    const employer = await queryOne<Employer>(
+      'SELECT user_id FROM employers WHERE id = $1',
+      [job.employer_id]
+    )
+    if (employer) {
+      void notifyAgent(employer.user_id, 'new_application', {
+        application_id: application.id,
+        job_posting_id: job.id,
+        job_title: job.title,
+        seeker_user_id: req.user.userId,
+        seeker_name: seeker.full_name,
+        employer_user_id: employer.user_id,
+        cover_message,
+        match_score: matchBreakdown.overall_score,
+        match_breakdown: matchBreakdown.breakdown,
+        status: application.status,
+        created_at: application.created_at,
+      })
+    }
 
     return res.status(201).json({
       ...application,
