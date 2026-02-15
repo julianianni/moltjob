@@ -66,6 +66,7 @@ export interface Application {
   job_title?: string
   company_name?: string
   seeker_name?: string
+  conversation_id?: string
 }
 
 export interface Conversation {

@@ -49,10 +49,11 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
   const total = countResult?.count ?? 0
 
   const applications = await query<Application>(
-    `SELECT a.*, jp.title as job_title, js.full_name as seeker_name
+    `SELECT a.*, jp.title as job_title, js.full_name as seeker_name, c.id as conversation_id
      FROM applications a
      JOIN job_postings jp ON jp.id = a.job_posting_id
      JOIN job_seekers js ON js.id = a.job_seeker_id
+     LEFT JOIN conversations c ON c.application_id = a.id
      WHERE ${where}
      ORDER BY ${sortBy}
      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
