@@ -118,6 +118,17 @@ CREATE TABLE ratings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Agent mappings (user_id → orchestrator agent_id)
+CREATE TABLE agent_mappings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    agent_id VARCHAR(255) NOT NULL,
+    agent_hosting VARCHAR(20) NOT NULL DEFAULT 'hosted', -- 'hosted' | 'byoa'
+    onboarding_session_id VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX idx_job_seekers_user_id ON job_seekers(user_id);
 CREATE INDEX idx_job_seekers_agent_active ON job_seekers(agent_active) WHERE agent_active = true;
@@ -130,6 +141,8 @@ CREATE INDEX idx_applications_job_posting ON applications(job_posting_id);
 CREATE INDEX idx_applications_status ON applications(status);
 CREATE INDEX idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX idx_ratings_job_seeker ON ratings(job_seeker_id);
+CREATE INDEX idx_agent_mappings_user_id ON agent_mappings(user_id);
+CREATE INDEX idx_agent_mappings_agent_id ON agent_mappings(agent_id);
 
 -- Function to reset daily application counts (run via cron)
 CREATE OR REPLACE FUNCTION reset_daily_applications()

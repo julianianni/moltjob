@@ -182,6 +182,16 @@ export interface Payment {
   updated_at: string
 }
 
+export interface AgentMapping {
+  id: string
+  user_id: string
+  agent_id: string
+  agent_hosting: 'hosted' | 'byoa'
+  onboarding_session_id: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AuthPayload {
   userId: string
   email: string

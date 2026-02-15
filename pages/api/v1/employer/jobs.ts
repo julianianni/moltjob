@@ -2,7 +2,9 @@ import type { NextApiResponse } from 'next'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
-import type { JobPosting, Employer } from '@/lib/types'
+import { matchJobsForSeeker } from '@/lib/matching'
+import { notifyAgent } from '@/lib/orchestrator'
+import type { JobPosting, JobSeeker, Employer } from '@/lib/types'
 
 export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiResponse) => {
   if (req.user.role !== 'employer') {
@@ -10,7 +12,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
   }
 
   const employer = await queryOne<Employer>(
-    'SELECT id FROM employers WHERE user_id = $1',
+    'SELECT * FROM employers WHERE user_id = $1',
     [req.user.userId]
   )
 
@@ -76,6 +78,40 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
     )
 
     await logActivity({ userId: req.user.userId, apiKeyId: req.apiKeyId, action: 'post_job', resourceType: 'job_posting', resourceId: job.id, metadata: { title } })
+
+    // Fire-and-forget: notify seekers with high match scores
+    void (async () => {
+      try {
+        const seekers = await query<JobSeeker>(
+          "SELECT * FROM job_seekers WHERE has_paid = true AND agent_active = true"
+        )
+        const threshold = Math.max(80, job.min_match_score ?? 0)
+        for (const seeker of seekers) {
+          const results = matchJobsForSeeker(seeker, [job])
+          if (results.length > 0 && results[0].score >= threshold) {
+            const match = results[0]
+            void notifyAgent(seeker.user_id, 'new_match', {
+              job_posting_id: job.id,
+              job_title: job.title,
+              company_name: employer.company_name,
+              seeker_user_id: seeker.user_id,
+              match_score: match.score,
+              match_breakdown: match.breakdown,
+              salary_min: job.salary_min,
+              salary_max: job.salary_max,
+              location: job.location,
+              remote_type: job.remote_type,
+              posted_at: job.created_at,
+              required_skills: job.required_skills,
+              nice_to_have_skills: job.nice_to_have_skills,
+            })
+          }
+        }
+      } catch (err) {
+        console.error('[webhook] new_match notification error:', err)
+      }
+    })()
+
     return res.status(201).json(job)
   }
 

@@ -250,6 +250,26 @@ INSERT INTO messages (conversation_id, sender_type, content, created_at) VALUES
 INSERT INTO ratings (job_seeker_id, employer_id, application_id, score, feedback) VALUES
   ('c3000000-0000-0000-0000-000000000003', 'd4000000-0000-0000-0000-000000000001', 'f6000000-0000-0000-0000-000000000004', 5, 'Excellent candidate. Agent communication was professional and accurate. Carol''s technical depth matched exactly what the agent described.');
 
+-- ============================================
+-- AGENT MAPPINGS (for webhook integration)
+-- ============================================
+
+-- Alice has a hosted agent
+INSERT INTO agent_mappings (user_id, agent_id, agent_hosting) VALUES
+  ('a1000000-0000-0000-0000-000000000001', 'agent-alice-001', 'hosted');
+
+-- Carol has a hosted agent
+INSERT INTO agent_mappings (user_id, agent_id, agent_hosting) VALUES
+  ('a1000000-0000-0000-0000-000000000003', 'agent-carol-001', 'hosted');
+
+-- Bob uses BYOA (no webhooks)
+INSERT INTO agent_mappings (user_id, agent_id, agent_hosting) VALUES
+  ('a1000000-0000-0000-0000-000000000002', 'external-bob-agent', 'byoa');
+
+-- Acme Corp employer has a hosted agent
+INSERT INTO agent_mappings (user_id, agent_id, agent_hosting) VALUES
+  ('b2000000-0000-0000-0000-000000000001', 'agent-acme-001', 'hosted');
+
 -- Update application counters
 UPDATE job_seekers SET applications_today = 2, last_application_date = CURRENT_DATE WHERE id = 'c3000000-0000-0000-0000-000000000001';
 UPDATE job_seekers SET applications_today = 1, last_application_date = CURRENT_DATE WHERE id = 'c3000000-0000-0000-0000-000000000002';
