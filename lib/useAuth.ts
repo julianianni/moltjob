@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/router'
 import type { AuthPayload } from './types'
 
 interface AuthState {
@@ -8,11 +9,22 @@ interface AuthState {
 }
 
 export function useAuth() {
+  const router = useRouter()
   const [auth, setAuth] = useState<AuthState>({
     token: null,
     user: null,
     loading: true,
   })
+  const logoutRef = useRef<(() => void) | undefined>(undefined)
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setAuth({ token: null, user: null, loading: false })
+    router.replace('/login')
+  }, [router])
+
+  logoutRef.current = logout
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -21,6 +33,15 @@ export function useAuth() {
       try {
         const user = JSON.parse(userStr) as AuthPayload
         setAuth({ token, user, loading: false })
+
+        // Validate token with server
+        fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(res => {
+          if (res.status === 401) {
+            logoutRef.current?.()
+          }
+        }).catch(() => {})
       } catch {
         setAuth({ token: null, user: null, loading: false })
       }
@@ -35,15 +56,9 @@ export function useAuth() {
     setAuth({ token, user, loading: false })
   }, [])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setAuth({ token: null, user: null, loading: false })
-  }, [])
-
   const fetchWithAuth = useCallback(
     async (url: string, options: RequestInit = {}) => {
-      return fetch(url, {
+      const res = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -51,6 +66,10 @@ export function useAuth() {
           ...options.headers,
         },
       })
+      if (res.status === 401) {
+        logoutRef.current?.()
+      }
+      return res
     },
     [auth.token]
   )
