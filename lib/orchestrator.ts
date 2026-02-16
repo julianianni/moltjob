@@ -166,3 +166,13 @@ export async function setAgentEnv(
 ) {
   return orchestratorRequest(`/admin/agents/${agentId}/env`, 'PUT', { env })
 }
+
+export async function createAgent(params: {
+  agent_type: 'seeker' | 'employer'
+  user_id: string
+  api_key: string
+  profile: Record<string, unknown>
+  extra_params?: Record<string, unknown>
+}) {
+  return orchestratorRequest('/agents', 'POST', params)
+}
