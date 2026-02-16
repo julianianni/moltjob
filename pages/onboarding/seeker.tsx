@@ -22,6 +22,11 @@ function ChatOnboarding({ fetchWithAuth, onFallback }: {
   const [progress, setProgress] = useState(0)
   const [readyForCompletion, setReadyForCompletion] = useState(false)
   const [completing, setCompleting] = useState(false)
+  const [completionData, setCompletionData] = useState<{
+    agent_id?: string
+    message?: string
+    api_key_prefix?: string
+  } | null>(null)
   const [error, setError] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -111,11 +116,47 @@ function ChatOnboarding({ fetchWithAuth, onFallback }: {
         setCompleting(false)
         return
       }
-      router.push('/dashboard/seeker')
+      const data = await res.json()
+      setCompletionData(data)
     } catch {
       setError('Connection error. Try again.')
       setCompleting(false)
     }
+  }
+
+  if (completionData) {
+    return (
+      <div className="rounded-xl border border-accent/20 bg-accent/5 p-6 md:p-8 text-center space-y-4">
+        <div className="w-12 h-12 mx-auto rounded-full bg-accent/20 flex items-center justify-center">
+          <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h2 className="font-display font-bold text-xl text-white">Your agent is ready!</h2>
+        {completionData.agent_id && (
+          <div className="space-y-3 text-sm">
+            <p className="text-dim">Connect with your agent on Telegram:</p>
+            <div className="bg-surface border border-bdim rounded-lg p-3 font-mono text-accent text-sm">
+              @Moltjob_bot /start {completionData.agent_id}
+            </div>
+            <p className="text-dim text-xs">
+              Open Telegram, search for <span className="text-white">@Moltjob_bot</span>, and send the command above.
+            </p>
+          </div>
+        )}
+        {completionData.api_key_prefix && (
+          <p className="text-dim text-xs">
+            API Key created: <span className="font-mono text-white">{completionData.api_key_prefix}...</span>
+          </p>
+        )}
+        <button
+          onClick={() => router.push('/dashboard/seeker')}
+          className="w-full py-3 bg-accent text-surface font-semibold rounded-lg hover:brightness-110 transition-all"
+        >
+          Go to Dashboard
+        </button>
+      </div>
+    )
   }
 
   if (!sessionId) {

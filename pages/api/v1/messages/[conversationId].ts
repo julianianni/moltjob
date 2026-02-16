@@ -69,7 +69,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC',
       [conversationId]
     )
-    return res.json(messages)
+    return res.json({ messages })
   }
 
   if (req.method === 'POST') {

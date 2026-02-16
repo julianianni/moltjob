@@ -17,10 +17,11 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
     )
 
     const application = await queryOne<Application>(
-      `SELECT a.*, jp.title as job_title, e.company_name
+      `SELECT a.*, jp.title as job_title, e.company_name, c.id as conversation_id
        FROM applications a
        JOIN job_postings jp ON jp.id = a.job_posting_id
        JOIN employers e ON e.id = jp.employer_id
+       LEFT JOIN conversations c ON c.application_id = a.id
        WHERE a.id = $1 AND a.job_seeker_id = $2`,
       [id, seeker?.id]
     )

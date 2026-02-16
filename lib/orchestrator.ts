@@ -159,3 +159,10 @@ export async function completeOnboarding(sessionId: string) {
 export async function cancelOnboarding(sessionId: string) {
   return orchestratorRequest(`/onboarding/sessions/${sessionId}`, 'DELETE')
 }
+
+export async function setAgentEnv(
+  agentId: string,
+  env: Record<string, string>
+) {
+  return orchestratorRequest(`/admin/agents/${agentId}/env`, 'PUT', { env })
+}

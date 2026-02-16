@@ -1,7 +1,8 @@
 import type { NextApiResponse } from 'next'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query } from '@/lib/db'
-import { completeOnboarding } from '@/lib/orchestrator'
+import { completeOnboarding, setAgentEnv } from '@/lib/orchestrator'
+import { createApiKey } from '@/lib/apikeys'
 
 export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -24,7 +25,28 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       )
     }
 
-    return res.json(result)
+    // Auto-generate API key for the agent
+    let apiKeyPrefix: string | null = null
+    if (completionResult.agent_id) {
+      try {
+        const { raw_key, record } = await createApiKey(req.user.userId, 'Agent API Key')
+        apiKeyPrefix = record.key_prefix
+
+        // Push the raw key to the orchestrator
+        try {
+          await setAgentEnv(completionResult.agent_id, { MOLTJOB_API_KEY: raw_key })
+        } catch (envError) {
+          console.error('[onboarding] Failed to push API key to orchestrator:', envError)
+        }
+      } catch (keyError) {
+        console.error('[onboarding] Failed to create API key:', keyError)
+      }
+    }
+
+    return res.json({
+      ...(result as Record<string, unknown>),
+      ...(apiKeyPrefix ? { api_key_prefix: apiKeyPrefix } : {}),
+    })
   } catch (error) {
     console.error('[onboarding] Failed to complete:', error)
     return res.status(502).json({ error: 'Failed to complete onboarding', code: 'ORCHESTRATOR_ERROR' })
