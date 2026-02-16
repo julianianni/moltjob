@@ -11,13 +11,21 @@ async function getClient() {
   if (authClient) return authClient
 
   if (!GCP_KEY_JSON || !ORCHESTRATOR_URL) {
+    console.warn('[orchestrator] getClient: missing config', { hasKey: !!GCP_KEY_JSON, hasUrl: !!ORCHESTRATOR_URL })
     return null
   }
 
-  const credentials = JSON.parse(GCP_KEY_JSON)
-  const auth = new GoogleAuth({ credentials })
-  authClient = await auth.getIdTokenClient(ORCHESTRATOR_URL)
-  return authClient
+  try {
+    const credentials = JSON.parse(GCP_KEY_JSON)
+    console.log('[orchestrator] getClient: parsed credentials for', credentials.client_email)
+    const auth = new GoogleAuth({ credentials })
+    authClient = await auth.getIdTokenClient(ORCHESTRATOR_URL)
+    console.log('[orchestrator] getClient: auth client created for', ORCHESTRATOR_URL)
+    return authClient
+  } catch (error) {
+    console.error('[orchestrator] getClient: failed to initialize', error)
+    return null
+  }
 }
 
 function sleep(ms: number) {
@@ -41,10 +49,13 @@ export async function wakeAgent(
   const body = { event_type: eventType, payload }
   const maxRetries = 2
 
+  console.log('[orchestrator] wakeAgent called:', { agentId, eventType, url })
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const response = await client.request({ url, method: 'POST', data: body })
       const status = response.status
+      console.log('[orchestrator] wakeAgent response:', { agentId, status, attempt })
 
       if (status === 202) {
         return true
@@ -87,11 +98,14 @@ export async function notifyAgent(
   eventType: string,
   payload: Record<string, unknown>
 ): Promise<void> {
+  console.log('[orchestrator] notifyAgent ENTRY:', { recipientUserId, eventType })
   try {
     const mapping = await queryOne<AgentMapping>(
       "SELECT * FROM agent_mappings WHERE user_id = $1 AND agent_hosting = 'hosted'",
       [recipientUserId]
     )
+
+    console.log('[orchestrator] notifyAgent mapping lookup:', { recipientUserId, mapping: mapping ? { agent_id: mapping.agent_id, hosting: mapping.agent_hosting } : null })
 
     if (!mapping) return
 

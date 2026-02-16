@@ -95,22 +95,28 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       metadata: { conversation_id: conversationId, sender_type: senderType },
     })
 
-    // Background webhook to the recipient (waitUntil keeps function alive)
+    // Webhook to the recipient — await so Vercel doesn't kill the function
     const recipientUserId = req.user.role === 'job_seeker'
       ? access.employer_user_id
       : access.seeker_user_id
-    waitUntil(notifyAgent(recipientUserId, 'new_message', {
-      message_id: message.id,
-      conversation_id: conversationId as string,
-      application_id: access.application_id,
-      sender_user_id: req.user.userId,
-      sender_type: senderType,
-      recipient_user_id: recipientUserId,
-      content,
-      job_title: access.job_title,
-      company_name: access.company_name,
-      created_at: message.created_at,
-    }))
+    console.log('[webhook] new_message: about to call notifyAgent', { recipientUserId, senderType, conversationId })
+    try {
+      await notifyAgent(recipientUserId, 'new_message', {
+        message_id: message.id,
+        conversation_id: conversationId as string,
+        application_id: access.application_id,
+        sender_user_id: req.user.userId,
+        sender_type: senderType,
+        recipient_user_id: recipientUserId,
+        content,
+        job_title: access.job_title,
+        company_name: access.company_name,
+        created_at: message.created_at,
+      })
+      console.log('[webhook] new_message: notifyAgent completed')
+    } catch (err) {
+      console.error('[webhook] new_message: notifyAgent threw', err)
+    }
 
     return res.status(201).json(message)
   }
