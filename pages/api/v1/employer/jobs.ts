@@ -1,4 +1,5 @@
 import type { NextApiResponse } from 'next'
+import { waitUntil } from '@vercel/functions'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
@@ -79,8 +80,8 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
 
     await logActivity({ userId: req.user.userId, apiKeyId: req.apiKeyId, action: 'post_job', resourceType: 'job_posting', resourceId: job.id, metadata: { title } })
 
-    // Fire-and-forget: notify seekers with high match scores
-    void (async () => {
+    // Background: notify seekers with high match scores (waitUntil keeps function alive)
+    waitUntil((async () => {
       try {
         const seekers = await query<JobSeeker>(
           "SELECT * FROM job_seekers WHERE has_paid = true AND agent_active = true"
@@ -90,7 +91,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
           const results = matchJobsForSeeker(seeker, [job])
           if (results.length > 0 && results[0].score >= threshold) {
             const match = results[0]
-            void notifyAgent(seeker.user_id, 'new_match', {
+            await notifyAgent(seeker.user_id, 'new_match', {
               job_posting_id: job.id,
               job_title: job.title,
               company_name: employer.company_name,
@@ -110,7 +111,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       } catch (err) {
         console.error('[webhook] new_match notification error:', err)
       }
-    })()
+    })())
 
     return res.status(201).json(job)
   }

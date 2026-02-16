@@ -1,4 +1,5 @@
 import type { NextApiResponse } from 'next'
+import { waitUntil } from '@vercel/functions'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
@@ -94,11 +95,11 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       metadata: { conversation_id: conversationId, sender_type: senderType },
     })
 
-    // Fire-and-forget webhook to the recipient
+    // Background webhook to the recipient (waitUntil keeps function alive)
     const recipientUserId = req.user.role === 'job_seeker'
       ? access.employer_user_id
       : access.seeker_user_id
-    void notifyAgent(recipientUserId, 'new_message', {
+    waitUntil(notifyAgent(recipientUserId, 'new_message', {
       message_id: message.id,
       conversation_id: conversationId as string,
       application_id: access.application_id,
@@ -109,7 +110,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       job_title: access.job_title,
       company_name: access.company_name,
       created_at: message.created_at,
-    })
+    }))
 
     return res.status(201).json(message)
   }

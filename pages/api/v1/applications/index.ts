@@ -1,4 +1,5 @@
 import type { NextApiResponse } from 'next'
+import { waitUntil } from '@vercel/functions'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
@@ -174,13 +175,13 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       metadata: { job_title: job.title, company_name: job.company_name, match_score: matchBreakdown.overall_score },
     })
 
-    // Fire-and-forget webhook to the employer
+    // Background webhook to the employer (waitUntil keeps function alive)
     const employer = await queryOne<Employer>(
       'SELECT user_id FROM employers WHERE id = $1',
       [job.employer_id]
     )
     if (employer) {
-      void notifyAgent(employer.user_id, 'new_application', {
+      waitUntil(notifyAgent(employer.user_id, 'new_application', {
         application_id: application.id,
         job_posting_id: job.id,
         job_title: job.title,
@@ -192,7 +193,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
         match_breakdown: matchBreakdown.breakdown,
         status: application.status,
         created_at: application.created_at,
-      })
+      }))
     }
 
     return res.status(201).json({

@@ -1,4 +1,5 @@
 import type { NextApiResponse } from 'next'
+import { waitUntil } from '@vercel/functions'
 import { withRateLimit, type AuthenticatedRequest } from '@/lib/middleware'
 import { query, queryOne } from '@/lib/db'
 import { logActivity } from '@/lib/activity'
@@ -57,7 +58,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
     metadata: { from: application.status, to: status },
   })
 
-  // Fire-and-forget webhook to the seeker
+  // Background webhook to the seeker (waitUntil keeps function alive)
   const seekerInfo = await queryOne<{ user_id: string; job_title: string; company_name: string }>(
     `SELECT js.user_id, jp.title as job_title, e.company_name
      FROM applications a
@@ -68,7 +69,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
     [id]
   )
   if (seekerInfo) {
-    void notifyAgent(seekerInfo.user_id, 'status_change', {
+    waitUntil(notifyAgent(seekerInfo.user_id, 'status_change', {
       application_id: updated.id,
       job_posting_id: updated.job_posting_id,
       job_title: seekerInfo.job_title,
@@ -78,7 +79,7 @@ export default withRateLimit(async (req: AuthenticatedRequest, res: NextApiRespo
       old_status: application.status,
       new_status: status,
       changed_at: new Date().toISOString(),
-    })
+    }))
   }
 
   return res.json(updated)
